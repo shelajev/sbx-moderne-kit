@@ -6,7 +6,7 @@ Docker Sandboxes kit that installs the [Moderne CLI](https://docs.moderne.io/use
 
 ```bash
 sbx secret set -g moderne
-sbx run --kit docker.io/<dockerhub-username>/sbx-moderne-kit:latest claude .
+sbx run --kit docker.io/olegselajev241/sbx-moderne-kit:latest claude .
 ```
 
 Paste your Moderne access token when prompted by `sbx secret set`. Moderne access tokens usually look like `mat-...`.
@@ -23,7 +23,7 @@ For a persistent sandbox you can reattach to:
 
 ```bash
 sbx create --name moderne-current \
-  --kit docker.io/<dockerhub-username>/sbx-moderne-kit:latest claude .
+  --kit docker.io/olegselajev241/sbx-moderne-kit:latest claude .
 
 sbx run moderne-current
 ```
@@ -72,7 +72,7 @@ mod config moderne show
 The `Publish Kits` workflow publishes this kit to Docker Hub as:
 
 ```text
-docker.io/<DOCKERHUB_USERNAME>/sbx-moderne-kit:latest
+docker.io/olegselajev241/sbx-moderne-kit:latest
 ```
 
 Set repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, then run the workflow manually.
