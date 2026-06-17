@@ -53,11 +53,30 @@ commands:
         EOF
         chmod +x "$HOME/.moderne/cli/bin/mod"
 
-        if ! grep -q '.moderne/cli/bin' "$HOME/.bashrc" 2>/dev/null; then
-          echo 'export PATH="$HOME/.moderne/cli/bin:$PATH"' >> "$HOME/.bashrc"
-        fi
       user: "1000"
       description: Install the Moderne CLI to the agent user's ~/.moderne/cli/bin
+    - command: |
+        set -eu
+
+        agent_home="$(getent passwd 1000 | cut -d: -f6)"
+        if [ -z "$agent_home" ]; then
+          agent_home="/home/agent"
+        fi
+
+        touch /etc/sandbox-persistent.sh
+        if ! grep -q 'moderne-kit-path' /etc/sandbox-persistent.sh; then
+          cat >> /etc/sandbox-persistent.sh <<EOF
+
+        # moderne-kit-path
+        case ":\$PATH:" in
+          *:"$agent_home/.moderne/cli/bin":*) ;;
+          *) export PATH="$agent_home/.moderne/cli/bin:\$PATH" ;;
+        esac
+        EOF
+        fi
+        chmod 0644 /etc/sandbox-persistent.sh
+      user: "root"
+      description: Make the Moderne CLI available on PATH for SBX Bash tool calls
 
   startup:
     - command:

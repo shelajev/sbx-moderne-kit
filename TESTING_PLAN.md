@@ -77,7 +77,7 @@ Add the concrete denied host to `network.allowedDomains` and retry with a new sa
 ## 3. Verify CLI install
 
 ```bash
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; which mod; mod --version; mod --help | sed -n "1,80p"'
+sbx exec moderne-test-1 -- sh -lc 'which mod; mod --version; mod --help | sed -n "1,80p"'
 ```
 
 Expected:
@@ -103,7 +103,7 @@ Expected:
 ## 4. Test automatic auth
 
 ```bash
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config moderne show'
+sbx exec moderne-test-1 -- sh -lc 'mod config moderne show'
 ```
 
 Expected:
@@ -121,8 +121,8 @@ Useful inspection commands:
 
 ```bash
 sbx exec moderne-test-1 -- sh -lc 'find "$HOME/.moderne" -maxdepth 4 -type f -print'
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config moderne --help'
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config --help'
+sbx exec moderne-test-1 -- sh -lc 'mod config moderne --help'
+sbx exec moderne-test-1 -- sh -lc 'mod config --help'
 ```
 
 Do not paste real token values into issue notes or commits.
@@ -138,7 +138,6 @@ sbx run --kit . moderne-test-1
 Inside the sandbox:
 
 ```bash
-export PATH="$HOME/.moderne/cli/bin:$PATH"
 mod config moderne login
 mod config moderne show
 ```
@@ -161,8 +160,8 @@ After auth validates, run a read-only command that reaches Moderne APIs.
 Start with command discovery:
 
 ```bash
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod --help'
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config moderne --help'
+sbx exec moderne-test-1 -- sh -lc 'mod --help'
+sbx exec moderne-test-1 -- sh -lc 'mod config moderne --help'
 ```
 
 Then choose the least destructive read-only command available, such as listing config, organizations, recipes, or user identity.
@@ -170,7 +169,7 @@ Then choose the least destructive read-only command available, such as listing c
 Known-good authenticated read-only smoke command:
 
 ```bash
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config moderne organizations show | sed -n "1,120p"'
+sbx exec moderne-test-1 -- sh -lc 'mod config moderne organizations show | sed -n "1,120p"'
 ```
 
 Expected:
@@ -183,7 +182,7 @@ If denied domains appear, decide whether they are core Moderne domains or workfl
 
 ```bash
 sbx run --kit . moderne-test-1
-sbx exec moderne-test-1 -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod config moderne show'
+sbx exec moderne-test-1 -- sh -lc 'mod config moderne show'
 ```
 
 Expected:

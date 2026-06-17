@@ -40,7 +40,7 @@ Install runs once when the sandbox is created:
 
 - Downloads the latest Linux Moderne CLI installer from Maven Central.
 - Installs `mod` into `~/.moderne/cli/bin`.
-- Adds `~/.moderne/cli/bin` to `.bashrc`.
+- Adds `~/.moderne/cli/bin` to `/etc/sandbox-persistent.sh` so SBX Bash tool calls can run `mod` without a manual PATH export.
 - On Linux arm64 sandboxes, removes the bundled x86-64 JRE when Java 25 is already available so the wrapper uses the sandbox JDK.
 
 Startup runs each time the sandbox starts:
@@ -56,7 +56,7 @@ The kit declares a `moderne` service in `spec.yaml`. Docker Sandboxes reads your
 After creating a named sandbox:
 
 ```bash
-sbx exec moderne-current -- sh -lc 'export PATH="$HOME/.moderne/cli/bin:$PATH"; mod --version && mod config moderne show'
+sbx exec moderne-current -- sh -lc 'mod --version && mod config moderne show'
 ```
 
 If auth fails, attach interactively and inspect the CLI config:
