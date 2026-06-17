@@ -1,0 +1,70 @@
+name: Validate SBX Kit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      sbx_release:
+        description: "docker/sbx-releases tag to install"
+        required: true
+        default: "v0.33.0"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      SBX_RELEASE: ${{ github.event.inputs.sbx_release || 'v0.33.0' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install SBX
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$SBX_RELEASE" \
+            --repo docker/sbx-releases \
+            --pattern 'DockerSandboxes-linux-amd64-ubuntu2404.deb' \
+            --output /tmp/docker-sandboxes.deb
+          sudo apt-get update
+          sudo apt-get install -y /tmp/docker-sandboxes.deb
+          sbx version
+
+      - name: Stage kit without local-only files
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/moderne-kit
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.DS_Store' \
+            --exclude '.env' \
+            --exclude '.sbx' \
+            --exclude '*.tar' \
+            --exclude '*.zip' \
+            --exclude 'scripts' \
+            --exclude 'tmp' \
+            --exclude '.tmp' \
+            ./ /tmp/moderne-kit/
+
+      - name: Validate kit directory
+        run: sbx kit validate /tmp/moderne-kit
+
+      - name: Inspect kit
+        run: sbx kit inspect /tmp/moderne-kit
+
+      - name: Pack and validate kit artifact
+        run: |
+          sbx kit pack /tmp/moderne-kit -o /tmp/moderne-sbx-kit.zip
+          sbx kit validate /tmp/moderne-sbx-kit.zip
+
+      - name: Check wrapper syntax
+        run: bash -n run.sh

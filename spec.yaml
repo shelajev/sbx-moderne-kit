@@ -1,0 +1,133 @@
+schemaVersion: "1"
+kind: mixin
+name: moderne
+displayName: Moderne CLI
+description: Installs the Moderne CLI and authenticates it with a proxy-managed Moderne access token.
+
+commands:
+  install:
+    - command: |
+        set -eu
+        tmp="$(mktemp -d)"
+        cleanup() {
+          rm -rf "$tmp"
+        }
+        trap cleanup EXIT
+
+        metadata_url="https://repo1.maven.org/maven2/io/moderne/moderne-cli-linux/maven-metadata.xml"
+        version="$(curl -fsSL "$metadata_url" | sed -n 's:.*<release>\(.*\)</release>.*:\1:p' | head -n 1)"
+        if [ -z "$version" ]; then
+          version="$(curl -fsSL "$metadata_url" | sed -n 's:.*<latest>\(.*\)</latest>.*:\1:p' | head -n 1)"
+        fi
+        if [ -z "$version" ]; then
+          echo "Unable to resolve latest Moderne CLI version from $metadata_url" >&2
+          exit 1
+        fi
+
+        installer_url="https://repo1.maven.org/maven2/io/moderne/moderne-cli-linux/$version/moderne-cli-linux-$version.sh"
+        curl -fL "$installer_url" -o "$tmp/moderne-cli-linux.sh"
+        sh "$tmp/moderne-cli-linux.sh"
+
+        if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
+          java_major="$(java -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | head -n 1 || true)"
+          if [ "${java_major:-0}" -ge 25 ] 2>/dev/null; then
+            rm -rf "$HOME/.moderne/cli/dist/jre"
+            rm -rf "$HOME/.moderne/cli/dist/classpath"
+          fi
+        fi
+
+        rm -f "$HOME/.moderne/cli/bin/mod"
+        cat > "$HOME/.moderne/cli/bin/mod" <<'EOF'
+        #!/usr/bin/env sh
+        set -eu
+
+        if [ -z "${MODERNE_JAVA_HOME:-}" ] && command -v java >/dev/null 2>&1 && command -v readlink >/dev/null 2>&1; then
+          java_bin="$(readlink -f "$(command -v java)" 2>/dev/null || true)"
+          if [ -n "$java_bin" ]; then
+            MODERNE_JAVA_HOME="$(dirname "$(dirname "$java_bin")")"
+            export MODERNE_JAVA_HOME
+          fi
+        fi
+
+        exec "$(dirname "$0")/modw" "$@"
+        EOF
+        chmod +x "$HOME/.moderne/cli/bin/mod"
+
+        if ! grep -q '.moderne/cli/bin' "$HOME/.bashrc" 2>/dev/null; then
+          echo 'export PATH="$HOME/.moderne/cli/bin:$PATH"' >> "$HOME/.bashrc"
+        fi
+      user: "1000"
+      description: Install the Moderne CLI to the agent user's ~/.moderne/cli/bin
+
+  startup:
+    - command:
+        - sh
+        - -lc
+        - |
+          set -eu
+          export PATH="$HOME/.moderne/cli/bin:$PATH"
+
+          if [ -n "${MODERNE_TOKEN:-}" ]; then
+            mod config moderne edit https://app.moderne.io --api https://api.app.moderne.io
+            if ! mod config moderne login --with-token "$MODERNE_TOKEN"; then
+              echo "moderne-sbx-kit: automatic Moderne token login failed; run 'mod config moderne login' manually to debug." >&2
+            fi
+          fi
+      user: "1000"
+      description: Configure Moderne CLI auth from MODERNE_TOKEN when present
+    - command:
+        - sh
+        - -lc
+        - |
+          set -eu
+          grep -q moderne-kit-marker CLAUDE.md 2>/dev/null || cat >> CLAUDE.md <<'EOF'
+
+          <!-- moderne-kit-marker -->
+          ## Moderne CLI is available
+
+          This sandbox has the Moderne CLI installed as `mod`. Use it for Moderne/OpenRewrite workflows:
+
+          - `mod --help` - inspect available commands
+          - `mod config moderne show` - inspect Moderne tenant configuration
+          - `mod config moderne login` - reconfigure auth manually if needed
+          EOF
+      description: Append a Moderne usage hint for Claude-based agents
+
+environment:
+  proxyManaged:
+    - MODERNE_TOKEN
+
+credentials:
+  sources:
+    moderne:
+      env:
+        - MODERNE_TOKEN
+
+network:
+  allowedDomains:
+    # Moderne CLI installer and wrapper downloads
+    - "github.com:443"
+    - "api.github.com:443"
+    - "objects.githubusercontent.com:443"
+    - "repo1.maven.org:443"
+
+    # Default Moderne SaaS tenant
+    - "app.moderne.io:443"
+    - "api.app.moderne.io:443"
+    - "login.app.moderne.io:443"
+
+    # Common recipe/build artifact sources. Tighten these if your workflow does not need them.
+    - "repo.maven.apache.org:443"
+    - "search.maven.org:443"
+    - "plugins.gradle.org:443"
+    - "services.gradle.org:443"
+    - "raw.githubusercontent.com:443"
+
+  serviceDomains:
+    api.app.moderne.io: moderne
+    login.app.moderne.io: moderne
+
+  serviceAuth:
+    moderne:
+      headerName: Authorization
+      valueFormat: "Bearer %s"
