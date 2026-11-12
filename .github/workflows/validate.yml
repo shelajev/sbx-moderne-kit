@@ -3,7 +3,6 @@ name: Validate SBX Kit
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
       sbx_release:
@@ -23,7 +22,7 @@ jobs:
       SBX_RELEASE: ${{ github.event.inputs.sbx_release || 'v0.33.0' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install SBX
         env:
